@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teams — Esports Tournament Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #04040a;
+    --surface: #0c0c18;
+    --surface2:#111120;
+    --border:  rgba(92,207,255,0.12);
+    --border2: rgba(92,207,255,0.06);
+    --cyan:    #5ccfff;
+    --gold:    #f0c040;
+    --red:     #ff4466;
+    --green:   #30e8a0;
+    --amber:   #ffaa30;
+    --purple:  #a060ff;
+    --text:    #dde4f0;
+    --muted:   #5a6080;
+    --glow-c:  0 0 24px rgba(92,207,255,0.35);
+    --glow-g:  0 0 24px rgba(240,192,64,0.35);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  /* noise */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9998; opacity: 0.6;
+  }
+
+  /* atmosphere */
+  .atmo {
+    position: fixed; pointer-events: none; z-index: 0; border-radius: 50%;
+  }
+  .atmo-1 {
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(240,192,64,0.05) 0%, transparent 65%);
+    top: -250px; right: -150px;
+    animation: af 15s ease-in-out infinite;
+  }
+  .atmo-2 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(92,207,255,0.04) 0%, transparent 65%);
+    bottom: -100px; left: -100px;
+    animation: af 11s ease-in-out infinite reverse;
+  }
+  @keyframes af { 0%,100%{transform:translate(0,0)} 50%{transform:translate(35px,45px)} }
+
+  /* grid */
+  .grid-bg {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(92,207,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92,207,255,0.025) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 100;
+    height: 68px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px;
+    background: rgba(4,4,10,0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(24px);
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 16px; text-decoration: none;
+  }
+
+  .hex-logo {
+    position: relative; width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .hex-logo svg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    animation: hexSpin 20s linear infinite;
+  }
+  @keyframes hexSpin { to { transform: rotate(360deg); } }
+  .hex-logo-inner {
+    position: relative; z-index: 1;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px; font-weight: 900;
+    color: var(--cyan); text-shadow: var(--glow-c);
+  }
+
+  .brand-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px; font-weight: 900; letter-spacing: 3px; color: var(--text);
+  }
+  .brand-name em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .brand-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; letter-spacing: 3px; color: var(--muted);
+    text-transform: uppercase; margin-top: 1px;
+  }
+
+  .h-clock {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px; color: var(--muted); letter-spacing: 2px;
+    border: 1px solid var(--border); padding: 6px 14px;
+    background: var(--surface);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: relative; z-index: 100;
+    display: flex; justify-content: center;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px;
+  }
+
+  nav a {
+    position: relative;
+    padding: 0 32px; height: 52px;
+    display: flex; align-items: center; gap: 9px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.25s;
+  }
+  nav a.active { color: var(--text); }
+  nav a::after {
+    content: '';
+    position: absolute; bottom: 0; left: 32px; right: 32px; height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s ease;
+    box-shadow: var(--glow-c);
+  }
+  nav a:hover { color: var(--text); }
+  nav a:hover::after, nav a.active::after { transform: scaleX(1); }
+
+  /* ── BREADCRUMB ── */
+  .breadcrumb {
+    position: relative; z-index: 1;
+    padding: 16px 48px;
+    border-bottom: 1px solid var(--border2);
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+  }
+  .breadcrumb a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .breadcrumb a:hover { color: var(--gold); }
+  .breadcrumb-cur { color: var(--gold); }
+  .breadcrumb-sep { color: var(--border); font-size: 14px; }
+
+  /* ── MAIN ── */
+  main {
+    position: relative; z-index: 1;
+    padding: 60px 48px 80px;
+    max-width: 1100px; margin: 0 auto;
+  }
+
+  /* page title */
+  .page-top { margin-bottom: 52px; }
+
+  .pt-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 4px;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .pt-eyebrow::before {
+    content: '';
+    display: inline-block; width: 24px; height: 1px;
+    background: var(--gold); box-shadow: var(--glow-g);
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 4vw, 50px);
+    font-weight: 900; line-height: 1; letter-spacing: -1px;
+  }
+  h1 span {
+    background: linear-gradient(90deg, var(--text) 40%, var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .pt-sub {
+    margin-top: 16px;
+    font-size: 15px; color: var(--muted); font-weight: 400;
+    letter-spacing: 0.3px; max-width: 460px; line-height: 1.6;
+  }
+
+  /* ── MENU LIST ── */
+  .menu-list {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border);
+    background: var(--border2);
+    gap: 1px;
+  }
+
+  .menu-item {
+    position: relative;
+    display: flex; align-items: center;
+    background: var(--surface);
+    text-decoration: none; color: inherit;
+    overflow: hidden;
+    transition: background 0.25s;
+    animation: slideIn 0.5s ease both;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .menu-item:nth-child(1) { animation-delay: 0.05s; }
+  .menu-item:nth-child(2) { animation-delay: 0.13s; }
+  .menu-item:nth-child(3) { animation-delay: 0.21s; }
+
+  .menu-item:hover { background: var(--surface2); }
+
+  .menu-item::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--item-color, var(--gold));
+    box-shadow: 0 0 12px var(--item-color, var(--gold));
+    transform: scaleY(0); transform-origin: center;
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .menu-item:hover::before { transform: scaleY(1); }
+
+  .menu-item::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--item-color, var(--gold)) 4%, transparent),
+      transparent 50%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .menu-item:hover::after { opacity: 1; }
+
+  .mi-index {
+    position: relative; z-index: 1;
+    width: 72px; flex-shrink: 0;
+    padding: 32px 0 32px 32px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted); letter-spacing: 1px;
+    transition: color 0.3s;
+  }
+  .menu-item:hover .mi-index { color: var(--item-color, var(--gold)); }
+
+  .mi-icon {
+    position: relative; z-index: 1;
+    width: 54px; height: 54px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 23px;
+    background: color-mix(in srgb, var(--item-color, var(--gold)) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--item-color, var(--gold)) 18%, transparent);
+    margin-right: 24px;
+    transition: box-shadow 0.3s;
+  }
+  .menu-item:hover .mi-icon {
+    box-shadow: 0 0 18px color-mix(in srgb, var(--item-color, var(--gold)) 30%, transparent);
+  }
+
+  .mi-body {
+    position: relative; z-index: 1;
+    flex: 1; padding: 32px 0;
+  }
+
+  .mi-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+    color: var(--text); margin-bottom: 5px;
+    transition: color 0.3s;
+  }
+  .menu-item:hover .mi-title { color: var(--item-color, var(--gold)); }
+
+  .mi-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .mi-arrow {
+    position: relative; z-index: 1;
+    padding: 0 36px;
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); transition: color 0.3s, gap 0.3s;
+  }
+  .menu-item:hover .mi-arrow { color: var(--item-color, var(--gold)); gap: 16px; }
+
+  .arr-line {
+    width: 20px; height: 1px;
+    background: currentColor; transition: width 0.3s;
+  }
+  .menu-item:hover .arr-line { width: 32px; }
+  .arr-head { font-size: 16px; font-weight: 700; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 22px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-brand {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; color: var(--muted);
+  }
+  .footer-brand em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .footer-back {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .footer-back:hover { color: var(--gold); }
+
+  @media (max-width: 760px) {
+    header, nav, .breadcrumb, main, footer { padding-left: 20px; padding-right: 20px; }
+    .mi-index { width: 44px; padding-left: 20px; }
+    .mi-arrow { padding: 0 20px; }
+    nav { justify-content: flex-start; overflow-x: auto; }
+    nav a { padding: 0 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="atmo atmo-1"></div>
+<div class="atmo atmo-2"></div>
+
+<!-- HEADER -->
+<header>
+  <a href="index.html" class="brand">
+    <div class="hex-logo">
+      <svg viewBox="0 0 42 42" fill="none">
+        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11"
+          stroke="rgba(92,207,255,0.35)" stroke-width="1" fill="none"/>
+        <polygon points="21,6 34,13 34,29 21,36 8,29 8,13"
+          stroke="rgba(92,207,255,0.15)" stroke-width="0.5" fill="none"/>
+      </svg>
+      <div class="hex-logo-inner">ET</div>
+    </div>
+    <div>
+      <div class="brand-name">Esports <em>Tournament</em></div>
+      <div class="brand-sub">Management System</div>
+    </div>
+  </a>
+  <div class="h-clock" id="clock">00:00:00</div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <a href="players_menu.html"><span>👤</span>Players</a>
+  <a href="teams_menu.html" class="active"><span>🛡️</span>Teams</a>
+  <a href="view_coaches.php"><span>🎯</span>Coaches</a>
+  <a href="analytics_menu.html"><span>📊</span>Analytics</a>
+</nav>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="index.html">Home</a>
+  <span class="breadcrumb-sep">›</span>
+  <span class="breadcrumb-cur">Teams</span>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <div class="page-top">
+    <!-- <div class="pt-eyebrow">Module — Team Registry</div> -->
+    <h1><span>Team Management</span></h1>
+    <!-- <p class="pt-sub">Select an operation to manage team records in the database.</p> -->
+  </div>
+
+  <div class="menu-list">
+
+    <a href="add_team.html" class="menu-item" style="--item-color:#f0c040;">
+      <div class="mi-index">01</div>
+      <div class="mi-icon">➕</div>
+      <div class="mi-body">
+        <div class="mi-title">Add Team</div>
+        <!-- <div class="mi-tag">INSERT</div> -->
+      </div>
+      <div class="mi-arrow"><div class="arr-line"></div><span class="arr-head">→</span></div>
+    </a>
+
+    <a href="view_teams.php" class="menu-item" style="--item-color:#5ccfff;">
+      <div class="mi-index">02</div>
+      <div class="mi-icon">📋</div>
+      <div class="mi-body">
+        <div class="mi-title">View Teams</div>
+        <!-- <div class="mi-tag">SELECT</div> -->
+      </div>
+      <div class="mi-arrow"><div class="arr-line"></div><span class="arr-head">→</span></div>
+    </a>
+
+    <a href="team_size.php" class="menu-item" style="--item-color:#a060ff;">
+      <div class="mi-index">03</div>
+      <div class="mi-icon">👥</div>
+      <div class="mi-body">
+        <div class="mi-title">Players Per Team</div>
+        <!-- <div class="mi-tag">GROUP BY</div> -->
+      </div>
+      <div class="mi-arrow"><div class="arr-line"></div><span class="arr-head">→</span></div>
+    </a>
+
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand"><em>Esports</em> Tournament Management System</div>
+  <a href="index.html" class="footer-back">← Back to Dashboard</a>
+</footer>
+
+<script>
+  function tick() {
+    const n = new Date();
+    document.getElementById('clock').textContent =
+      [n.getHours(), n.getMinutes(), n.getSeconds()]
+        .map(v => String(v).padStart(2,'0')).join(':');
+  }
+  tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>

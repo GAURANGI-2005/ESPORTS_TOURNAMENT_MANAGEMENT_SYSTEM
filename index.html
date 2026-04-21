@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esports Tournament Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #04040a;
+    --bg2:      #080810;
+    --surface:  #0c0c18;
+    --surface2: #111120;
+    --border:   rgba(92,207,255,0.12);
+    --border2:  rgba(92,207,255,0.06);
+    --cyan:     #5ccfff;
+    --gold:     #f0c040;
+    --red:      #ff4466;
+    --green:    #30e8a0;
+    --text:     #dde4f0;
+    --muted:    #5a6080;
+    --glow-c:   0 0 24px rgba(92,207,255,0.35);
+    --glow-g:   0 0 24px rgba(240,192,64,0.35);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9998; opacity: 0.6;
+  }
+
+  /* ── BACKGROUND RADIAL ATMOSPHERE ── */
+  .atmo {
+    position: fixed; pointer-events: none; z-index: 0;
+  }
+  .atmo-1 {
+    width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(92,207,255,0.055) 0%, transparent 65%);
+    top: -300px; left: -200px;
+    animation: atmoFloat 14s ease-in-out infinite;
+  }
+  .atmo-2 {
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(240,192,64,0.04) 0%, transparent 65%);
+    bottom: -200px; right: -150px;
+    animation: atmoFloat 18s ease-in-out infinite reverse;
+  }
+  @keyframes atmoFloat {
+    0%,100% { transform: translate(0,0); }
+    50%     { transform: translate(40px, 50px); }
+  }
+
+  /* ── GRID LINES ── */
+  .grid-bg {
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(92,207,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92,207,255,0.025) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative; z-index: 100;
+    height: 68px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px;
+    background: rgba(4,4,10,0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(24px);
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  /* Animated hexagonal logo */
+  .hex-logo {
+    position: relative; width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hex-logo svg {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    animation: hexSpin 20s linear infinite;
+  }
+  @keyframes hexSpin { to { transform: rotate(360deg); } }
+  .hex-logo-inner {
+    position: relative; z-index: 1;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px; font-weight: 900;
+    color: var(--cyan);
+    text-shadow: var(--glow-c);
+  }
+
+  .brand-words {}
+  .brand-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px; font-weight: 900;
+    letter-spacing: 3px; color: var(--text);
+  }
+  .brand-name em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .brand-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; letter-spacing: 3px; color: var(--muted);
+    text-transform: uppercase; margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex; align-items: center; gap: 28px;
+  }
+  .h-clock {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px; color: var(--muted); letter-spacing: 2px;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    background: var(--surface);
+  }
+  .h-dbms {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: relative; z-index: 100;
+    display: flex; justify-content: center;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px;
+  }
+
+  nav a {
+    position: relative;
+    padding: 0 32px; height: 52px;
+    display: flex; align-items: center; gap: 9px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.25s;
+  }
+
+  nav a .ni { font-size: 15px; }
+
+  nav a::after {
+    content: '';
+    position: absolute; bottom: 0; left: 32px; right: 32px; height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s ease;
+    box-shadow: var(--glow-c);
+  }
+
+  nav a:hover { color: var(--text); }
+  nav a:hover::after { transform: scaleX(1); }
+
+  /* ── MAIN ── */
+  main {
+    position: relative; z-index: 1;
+    padding: 64px 48px 80px;
+    max-width: 1200px; margin: 0 auto;
+  }
+
+  /* Page heading */
+  .page-heading {
+    margin-bottom: 56px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+  }
+
+  .ph-left {}
+
+  .ph-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 4px;
+    color: var(--cyan); text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ph-eyebrow::before {
+    content: ''; display: inline-block;
+    width: 24px; height: 1px;
+    background: var(--cyan); box-shadow: var(--glow-c);
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(30px, 4vw, 52px);
+    font-weight: 900; line-height: 1;
+    letter-spacing: -1px; color: var(--text);
+  }
+  h1 span {
+    display: block; color: var(--gold);
+    text-shadow: var(--glow-g);
+  }
+
+  .ph-right {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; letter-spacing: 3px;
+    color: var(--muted); text-transform: uppercase;
+    text-align: right; line-height: 1.8;
+  }
+
+  /* ── CARD GRID ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    background: var(--border2);
+    border: 1px solid var(--border);
+  }
+
+  .card {
+    position: relative;
+    background: var(--surface);
+    padding: 40px 36px 36px;
+    overflow: hidden;
+    transition: background 0.3s;
+    animation: fadeUp 0.6s ease both;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.12s; }
+  .card:nth-child(3) { animation-delay: 0.19s; }
+  .card:nth-child(4) { animation-delay: 0.26s; }
+
+  .card:hover { background: var(--surface2); }
+
+  /* Glowing left border on hover */
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: var(--card-accent, var(--cyan));
+    box-shadow: 0 0 14px var(--card-accent, var(--cyan));
+    transform: scaleY(0); transform-origin: bottom;
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .card:hover::before { transform: scaleY(1); }
+
+  /* Large background number */
+  .card-num {
+    position: absolute; top: 16px; right: 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 80px; font-weight: 900; line-height: 1;
+    color: var(--card-accent, var(--cyan));
+    opacity: 0.04;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .card:hover .card-num { opacity: 0.08; }
+
+  .card-icon-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .card-icon {
+    width: 54px; height: 54px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    background: color-mix(in srgb, var(--card-accent, var(--cyan)) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--card-accent, var(--cyan)) 20%, transparent);
+    transition: box-shadow 0.3s;
+  }
+  .card:hover .card-icon {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--card-accent, var(--cyan)) 30%, transparent);
+  }
+
+  .card-corner-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    transition: all 0.3s;
+  }
+  .card:hover .card-corner-tag {
+    color: var(--card-accent, var(--cyan));
+    border-color: color-mix(in srgb, var(--card-accent, var(--cyan)) 40%, transparent);
+  }
+
+  .card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 17px; font-weight: 700;
+    letter-spacing: 0.5px; margin-bottom: 10px;
+    color: var(--text);
+    transition: color 0.3s;
+  }
+  .card:hover .card-title { color: var(--card-accent, var(--cyan)); }
+
+  .card-desc {
+    font-size: 14px; color: var(--muted);
+    line-height: 1.65; font-weight: 400;
+  }
+
+  .card-cta {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 28px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    transition: color 0.3s, gap 0.3s;
+  }
+  .card:hover .card-cta {
+    color: var(--card-accent, var(--cyan));
+    gap: 14px;
+  }
+  .cta-line {
+    height: 1px; width: 24px;
+    background: currentColor;
+    transition: width 0.3s;
+  }
+  .card:hover .cta-line { width: 40px; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 56px 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 22px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .footer-brand {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; color: var(--muted);
+  }
+  .footer-brand em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--cyan), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .footer-info {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+  }
+
+  @media (max-width: 860px) {
+    .card-grid { grid-template-columns: 1fr; }
+    header, nav, main, footer { padding-left: 20px; padding-right: 20px; }
+    .page-heading { flex-direction: column; align-items: flex-start; gap: 16px; }
+    nav { justify-content: flex-start; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="grid-bg"></div>
+<div class="atmo atmo-1"></div>
+<div class="atmo atmo-2"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="hex-logo">
+      <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="21,2 38,11 38,31 21,40 4,31 4,11"
+          stroke="rgba(92,207,255,0.35)" stroke-width="1" fill="none"/>
+        <polygon points="21,6 34,13 34,29 21,36 8,29 8,13"
+          stroke="rgba(92,207,255,0.15)" stroke-width="0.5" fill="none"/>
+      </svg>
+      <div class="hex-logo-inner">ET</div>
+    </div>
+    <div class="brand-words">
+      <div class="brand-name">Esports <em>Tournament</em></div>
+      <div class="brand-sub">Management System</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <!-- <div class="h-dbms">DBMS Project</div> -->
+    <div class="h-clock" id="clock">00:00:00</div>
+  </div>
+</header>
+
+<!-- NAV -->
+<!-- <nav>
+  <a href="players_menu.html"><span class="ni">👤</span>Players</a>
+  <a href="teams_menu.html"><span class="ni">🛡️</span>Teams</a>
+  <a href="view_coaches.php"><span class="ni">🎯</span>Coaches</a>
+  <a href="analytics_menu.html"><span class="ni">📊</span>Analytics</a>
+</nav> -->
+
+<!-- MAIN -->
+<main>
+
+  <div class="page-heading">
+    <div class="ph-left">
+      <!-- <div class="ph-eyebrow">System Overview</div> -->
+      <h1>DASHBOARD<span>COMMAND</span></h1>
+    </div>
+    <div class="ph-right">
+      Esports Tournament<br>Management System
+    </div>
+  </div>
+
+  <div class="card-grid">
+
+    <!-- Players -->
+    <a href="players_menu.html" class="card" style="--card-accent:#5ccfff;">
+      <div class="card-num">01</div>
+      <div class="card-icon-row">
+        <div class="card-icon">👤</div>
+        <div class="card-corner-tag">Module</div>
+      </div>
+      <div class="card-title">Players</div>
+      <div class="card-desc">Manage all player records</div>
+      <div class="card-cta"><div class="cta-line"></div>Enter</div>
+    </a>
+
+    <!-- Teams -->
+    <a href="teams_menu.html" class="card" style="--card-accent:#f0c040;">
+      <div class="card-num">02</div>
+      <div class="card-icon-row">
+        <div class="card-icon">🛡️</div>
+        <div class="card-corner-tag">Module</div>
+      </div>
+      <div class="card-title">Teams</div>
+      <div class="card-desc">Manage esports teams</div>
+      <div class="card-cta"><div class="cta-line"></div>Enter</div>
+    </a>
+
+    <!-- Matches -->
+    <a href="match_statistics.php" class="card" style="--card-accent:#ff4466;">
+      <div class="card-num">03</div>
+      <div class="card-icon-row">
+        <div class="card-icon">⚔️</div>
+        <div class="card-corner-tag">Module</div>
+      </div>
+      <div class="card-title">Matches</div>
+      <div class="card-desc">Match statistics &amp; performance</div>
+      <div class="card-cta"><div class="cta-line"></div>Enter</div>
+    </a>
+
+    <!-- Analytics -->
+    <a href="analytics_menu.html" class="card" style="--card-accent:#30e8a0;">
+      <div class="card-num">04</div>
+      <div class="card-icon-row">
+        <div class="card-icon">📊</div>
+        <div class="card-corner-tag">Module</div>
+      </div>
+      <div class="card-title">Analytics</div>
+      <div class="card-desc">Database query insights</div>
+      <div class="card-cta"><div class="cta-line"></div>Enter</div>
+    </a>
+
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand"><em>Esports</em> Tournament Management System</div>
+  <div class="footer-info">Database Management System Project</div>
+</footer>
+
+<script>
+  function tick() {
+    const n = new Date();
+    document.getElementById('clock').textContent =
+      [n.getHours(), n.getMinutes(), n.getSeconds()]
+        .map(v => String(v).padStart(2,'0')).join(':');
+  }
+  tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
